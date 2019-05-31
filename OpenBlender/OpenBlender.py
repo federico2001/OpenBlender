@@ -14,23 +14,25 @@ import time
 import math
 import json
 
-url = 'http://52.8.156.139/oro/'
+
 
 def call(action, json_parametros):
     try:
         respuesta = ''
+        url = ''
         if 'test_call' in json_parametros and json_parametros['test_call'] == 1:
-            print('test')
-            global url
             url = 'https://bronce-federicorgs.c9users.io/'
+        else:
+            url = 'http://52.8.156.139/oro/'
+        print(url)
         if action == 'API_createDataset':
-            respuesta = API_createDataset(json_parametros)
+            respuesta = API_createDataset(json_parametros, url)
         elif action == 'API_insertObservationsFromDataFrame':
-            respuesta = API_insertObservationsFromDataFrame(json_parametros)
+            respuesta = API_insertObservationsFromDataFrame(json_parametros, url)
         elif action == 'API_getObservationsFromDataset':
-            respuesta = API_getSampleObservationsFromDataset(json_parametros)
+            respuesta = API_getSampleObservationsFromDataset(json_parametros, url)
         elif action == 'API_powerModel':
-            respuesta = API_powerModel(json_parametros)
+            respuesta = API_powerModel(json_parametros, url)
         else:
             data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
             with closing(urlopen(url, data)) as response:
@@ -40,7 +42,7 @@ def call(action, json_parametros):
         print(json.dumps({"status": "internal error", "msg": str(e)}))
         return json.dumps({"status": "internal error", "msg": str(e)})
     
-def API_createDataset(json_parametros):
+def API_createDataset(json_parametros, url):
     action = 'API_createDataset'
     df, valido_df, msj = comprobarJSONaDF(json_parametros['dataframe'])
     if not valido_df:
@@ -103,7 +105,7 @@ def API_createDataset(json_parametros):
             return json.loads(response.read().decode())
     return respuesta0
 
-def API_insertObservationsFromDataFrame(json_parametros):
+def API_insertObservationsFromDataFrame(json_parametros, url):
     action = 'API_insertObservationsFromDataFrame'
     df, valido_df, msj = comprobarJSONaDF(json_parametros['dataframe'])
     if not valido_df:
@@ -146,7 +148,7 @@ def API_insertObservationsFromDataFrame(json_parametros):
     return respuesta
 
 
-def API_getSampleObservationsFromDataset(json_parametros):
+def API_getSampleObservationsFromDataset(json_parametros, url):
     action = 'API_getSampleObservationsFromDataset'
     
     start = time.time()
@@ -194,7 +196,7 @@ def API_getSampleObservationsFromDataset(json_parametros):
     return respuesta
 
 
-def API_powerModel(json_parametros):
+def API_powerModel(json_parametros, url):
     action = 'API_powerModel'
     data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
     with closing(urlopen(url, data)) as response:
