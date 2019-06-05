@@ -13,7 +13,18 @@ import requests
 import time
 import math
 import json
+import traceback
 
+
+def dameRespuestaLlamado(url, data):
+    with closing(urlopen(url, data)) as response:
+        respuesta = json.loads(response.read().decode())
+    try:
+        if 'error' in respuesta['status']:
+            print("Error: " + str(respuesta['response']))
+    except:
+        print(respuesta)
+    return respuesta
 
 
 def call(action, json_parametros):
@@ -24,7 +35,7 @@ def call(action, json_parametros):
             url = 'https://bronce-federicorgs.c9users.io/'
         else:
             url = 'http://52.8.156.139/oro/'
-        print(url)
+        #print(url)
         if action == 'API_createDataset':
             respuesta = API_createDataset(json_parametros, url)
         elif action == 'API_insertObservationsFromDataFrame':
@@ -35,11 +46,13 @@ def call(action, json_parametros):
             respuesta = API_powerModel(json_parametros, url)
         else:
             data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-            with closing(urlopen(url, data)) as response:
-                return json.loads(response.read().decode())
+            respuesta = dameRespuestaLlamado(url, data)
         return respuesta
     except Exception as e:
-        print(json.dumps({"status": "internal error", "msg": str(e)}))
+        if json_parametros['test_call'] == 1:
+            print(json.dumps({"status": "internal error", "msg": traceback.format_exc()}))
+        else:
+            print(json.dumps({"status": "internal error", "msg": str(e)}))
         return json.dumps({"status": "internal error", "msg": str(e)})
     
 def API_createDataset(json_parametros, url):
@@ -67,23 +80,21 @@ def API_createDataset(json_parametros, url):
             json_particion_molde = json_particion.copy()
             json_particion_molde['insert_observations'] = 0
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion_molde)}).encode()
-            with closing(urlopen(url, data)) as response:
-                respuesta = response.read().decode()
+            respuesta = dameRespuestaLlamado(url, data)
             #print(respuesta)
             respuesta0 = respuesta
-            json_particion['id_dataset'] = json.loads(respuesta)['id_dataset']
+            json_particion['id_dataset'] = respuesta['id_dataset']
             print("Dataset created succesfully, id: " + str(json_particion['id_dataset']))
             print("Uploading..")
             stop = time.time()
-            segundos = stop - start
-            tam_pedazo = int(round(tam_pedazo_ini * 30 / segundos))
+            segundos = math.ceil(stop - start)
+            tam_pedazo = int(round(300 / segundos))
             
             action = 'API_insertObservationsFromDataFrame'
             for i in range(0, n_filas, tam_pedazo):
                 json_particion['dataframe'] = df[i:i+tam_pedazo].to_json()
                 data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-                with closing(urlopen(url, data)) as response:
-                    respuesta = response.read().decode()
+                respuesta = dameRespuestaLlamado(url, data)
                 # Imprimir avance
                 avance = round((i + tam_pedazo) / n_filas * 100, 3)
                 if avance > 100:
@@ -95,14 +106,14 @@ def API_createDataset(json_parametros, url):
         else:
             json_particion['dataframe'] = df[0:tam_pedazo_ini].to_json()
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-            with closing(urlopen(url, data)) as response:
-                return json.loads(response.read().decode())
+            respuesta = dameRespuestaLlamado(url, data)
+            return respuesta
     else:
         tam_pedazo_ini = tam_pedazo_ini if n_filas > tam_pedazo_ini else n_filas
         json_particion['dataframe'] = df.sample(n=tam_pedazo_ini).to_json()
         data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-        with closing(urlopen(url, data)) as response:
-            return json.loads(response.read().decode())
+        respuesta = dameRespuestaLlamado(url, data)
+        return respuesta
     return respuesta0
 
 def API_insertObservationsFromDataFrame(json_parametros, url):
@@ -112,26 +123,23 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
         return msj
     n_filas = df.shape[0]
     n_columnas = df.shape[1]
-    tam_pedazo_ini = 100
+    tam_pedazo_ini = 1000
     json_particion = json_parametros.copy()
     if n_filas > tam_pedazo_ini:
         # Inserta por primera vez para medir tiempos.
         start = time.time()
         json_particion['dataframe'] = df[0:tam_pedazo_ini].to_json()
         data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-        with closing(urlopen(url, data)) as response:
-            respuesta = response.read().decode()
-        respuesta0 = respuesta
+        respuesta = dameRespuestaLlamado(url, data)
         stop = time.time()
-        segundos = stop - start
-        tam_pedazo = int(round(tam_pedazo_ini * 30 / segundos))
+        segundos = math.ceil(stop - start)
+        tam_pedazo = int(round(300 / segundos))
         print("Uploading..")
         json_particion = json_parametros.copy()
         for i in range(tam_pedazo_ini, n_filas, tam_pedazo):
             json_particion['dataframe'] = df[i:i+tam_pedazo].to_json()
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-            with closing(urlopen(url, data)) as response:
-                respuesta = response.read().decode()
+            respuesta = dameRespuestaLlamado(url, data)
             # Imprimir avance
             avance = round((i + tam_pedazo)/n_filas * 100, 3)
             if avance > 100:
@@ -155,14 +163,13 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
     json_parametros['tamano_bin'] = 50
     json_parametros['skip'] = 0
     data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-    with closing(urlopen(url, data)) as response:
-        respuesta = response.read().decode()
-    # print(json.loads(respuesta))
-    t_universo = json.loads(respuesta)['universe_size']
+    respuesta = dameRespuestaLlamado(url, data)
+    t_universo = respuesta['universe_size']
     stop = time.time()
-    segundos = stop - start
-    tam_pedazo = int(round(30 * 30 / segundos))
+    segundos = math.ceil(stop - start)
+    tam_pedazo = int(round(300 / segundos))
     num_pedazos = math.ceil(t_universo/tam_pedazo)
+    num_pedazos = num_pedazos if num_pedazos > 0 else 1
     print('Setting up..')
     print('starting process..')
     df_resp = None
@@ -170,13 +177,8 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
         json_parametros['tamano_bin'] = tam_pedazo
         json_parametros['skip'] = tam_pedazo * i
         data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-        with closing(urlopen(url, data)) as response:
-            respuesta = response.read().decode()
-        try:
-            print(json.loads(respuesta)['long_msg'])
-        except:
-            print(json.loads(respuesta)['status'])
-        df = pd.DataFrame.from_dict(json.loads(respuesta)['sample'])
+        respuesta = dameRespuestaLlamado(url, data)
+        df = pd.DataFrame.from_dict(respuesta['sample'])
         if df_resp is None:
             df_resp = df
         else:
@@ -188,10 +190,11 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
         else:
             print(str(avance) + " % completed.")
             print("downloading..")
-    if 's' in json_parametros:
-        if int(json_parametros['s']) < df_resp.shape[0]:
-            drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['s']), replace=False)
+    if 'sample_size' in json_parametros:
+        if int(json_parametros['sample_size']) < df_resp.shape[0]:
+            drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
             df_resp = df_resp.drop(drop_indices)
+    #print(df_resp)
     respuesta = json.loads(json.dumps({'universe_size' : t_universo, 'sample' : json.loads(df_resp.to_json())}))
     return respuesta
 
@@ -199,8 +202,7 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 def API_powerModel(json_parametros, url):
     action = 'API_powerModel'
     data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-    with closing(urlopen(url, data)) as response:
-        respuesta = json.loads(response.read().decode())
+    respuesta = dameRespuestaLlamado(url, data)
     return respuesta
 
 
