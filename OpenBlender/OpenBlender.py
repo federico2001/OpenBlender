@@ -22,6 +22,7 @@ def dameRespuestaLlamado(url, data):
     try:
         if 'error' in respuesta['status']:
             print("Error: " + str(respuesta['response']))
+            return False
     except:
         print(respuesta)
     return respuesta
@@ -32,7 +33,7 @@ def call(action, json_parametros):
         respuesta = ''
         url = ''
         if 'test_call' in json_parametros and json_parametros['test_call'] == 1:
-            url = 'https://bronce-federicorgs.c9users.io/'
+            url = 'http://18.224.24.90:8080/bronce'
         else:
             url = 'http://52.8.156.139/oro/'
         #print(url)
@@ -85,7 +86,7 @@ def API_createDataset(json_parametros, url):
             respuesta0 = respuesta
             json_particion['id_dataset'] = respuesta['id_dataset']
             print("Dataset created succesfully, id: " + str(json_particion['id_dataset']))
-            print("Uploading..")
+            print("Starting upload..")
             stop = time.time()
             segundos = math.ceil(stop - start)
             tam_pedazo = int(round(300 / segundos))
@@ -96,13 +97,13 @@ def API_createDataset(json_parametros, url):
                 data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
                 respuesta = dameRespuestaLlamado(url, data)
                 # Imprimir avance
-                avance = round((i + tam_pedazo) / n_filas * 100, 3)
+                avance = round((i + tam_pedazo) / n_filas * 100, 2)
                 if avance > 100:
-                    print('100% completed..')
-                    print("Finishing..")
+                    print('100%')
+                    print("Wrapping Up..")
                 else:
-                    print(str(avance) + "% completed.")
-                    print("Uploading...")
+                    print(str(avance) + "%")
+                    #print("Uploading...")
         else:
             json_particion['dataframe'] = df[0:tam_pedazo_ini].to_json()
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
@@ -141,13 +142,13 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
             respuesta = dameRespuestaLlamado(url, data)
             # Imprimir avance
-            avance = round((i + tam_pedazo)/n_filas * 100, 3)
+            avance = round((i + tam_pedazo)/n_filas * 100, 2)
             if avance > 100:
-                print('100% completed..')
-                print("Finished.")
+                print('100%')
+                print("Wrapping Up..")
             else:
-                print(str(avance) + "% completed.")
-                print("Uploading...")
+                print(str(avance) + "%")
+                #print("Uploading...")
                 time.sleep(2)
     else:
         data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
@@ -171,7 +172,6 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
     num_pedazos = math.ceil(t_universo/tam_pedazo)
     num_pedazos = num_pedazos if num_pedazos > 0 else 1
     print('Setting up..')
-    print('starting process..')
     df_resp = None
     for i in range(0, num_pedazos):
         json_parametros['tamano_bin'] = tam_pedazo
@@ -188,8 +188,8 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
             print(str(avance) + " % completed.")
             print("wrapping up..")
         else:
-            print(str(avance) + " % completed.")
-            print("downloading..")
+            print(str(avance) + " %")
+            #print("downloading..")
     if 'sample_size' in json_parametros:
         if int(json_parametros['sample_size']) < df_resp.shape[0]:
             drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
