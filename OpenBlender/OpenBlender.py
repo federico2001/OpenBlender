@@ -33,7 +33,7 @@ def call(action, json_parametros):
         respuesta = ''
         url = ''
         if 'test_call' in json_parametros and json_parametros['test_call'] == 1:
-            url = 'http://18.224.24.90:8080/bronce'
+            url = 'http://3.16.237.62:8080/bronce'
         else:
             url = 'http://52.8.156.139/oro/'
         #print(url)
