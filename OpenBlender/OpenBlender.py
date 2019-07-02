@@ -32,7 +32,7 @@ def call(action, json_parametros):
     try:
         respuesta = ''
         url = ''
-        if 'test_call' in json_parametros and json_parametros['test_call'] == 1:
+        if 'oblender' in json_parametros and json_parametros['oblender'] == 1:
             url = 'http://3.16.237.62:8080/bronce'
         else:
             url = 'http://52.8.156.139/oro/'
@@ -50,7 +50,7 @@ def call(action, json_parametros):
             respuesta = dameRespuestaLlamado(url, data)
         return respuesta
     except Exception as e:
-        if json_parametros['test_call'] == 1:
+        if json_parametros['oblender'] == 1:
             print(json.dumps({"status": "internal error", "msg": traceback.format_exc()}))
         else:
             print(json.dumps({"status": "internal error", "msg": str(e)}))
@@ -67,13 +67,13 @@ def API_createDataset(json_parametros, url):
     json_particion = json_parametros.copy()
     if 'insert_observations' in json_parametros:
         insert_observations = json_parametros['insert_observations'] == 1
-    test_output = False
-    if 'test_output' in json_parametros:
-        test_output = json_parametros['test_output'] == 1
+    test_call = False
+    if 'test_call' in json_parametros:
+        test_call = json_parametros['test_call'] == 1
     respuesta0 = None
     
     # Primer pedazo para crear el dataset
-    if not test_output and n_filas > tam_pedazo_ini:
+    if not test_call and n_filas > tam_pedazo_ini:
         if insert_observations:
             start = time.time()
             tam_pedazo_ini = tam_pedazo_ini if n_filas > tam_pedazo_ini else n_filas
