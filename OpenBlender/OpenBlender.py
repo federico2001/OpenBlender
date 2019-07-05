@@ -58,7 +58,8 @@ def call(action, json_parametros):
     
 def API_createDataset(json_parametros, url):
     action = 'API_createDataset'
-    df, valido_df, msj = comprobarJSONaDF(json_parametros['dataframe'])
+    nom_obs = 'dataframe' if 'dataframe' in json_parametros else 'observations'
+    df, valido_df, msj = comprobarJSONaDF(json_parametros[nom_obs])
     if not valido_df:
         return msj
     n_filas = df.shape[0]
@@ -71,7 +72,6 @@ def API_createDataset(json_parametros, url):
     if 'test_call' in json_parametros:
         test_call = json_parametros['test_call'] == 1
     respuesta0 = None
-    nom_obs = 'dataframe' if 'dataframe' in json_particion else 'observations'
     
     # Primer pedazo para crear el dataset
     if not test_call and n_filas > tam_pedazo_ini:
@@ -122,14 +122,15 @@ def API_createDataset(json_parametros, url):
 
 def API_insertObservationsFromDataFrame(json_parametros, url):
     action = 'API_insertObservationsFromDataFrame'
-    df, valido_df, msj = comprobarJSONaDF(json_parametros['dataframe'])
+    
+    nom_obs = 'dataframe' if 'dataframe' in json_parametros else 'observations'
+    df, valido_df, msj = comprobarJSONaDF(json_parametros[nom_obs])
     if not valido_df:
         return msj
     n_filas = df.shape[0]
     n_columnas = df.shape[1]
     tam_pedazo_ini = 1000
     json_particion = json_parametros.copy()
-    nom_obs = 'dataframe' if 'dataframe' in json_particion else 'observations'
     
     if n_filas > tam_pedazo_ini:
         # Inserta por primera vez para medir tiempos.
