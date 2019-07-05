@@ -39,7 +39,7 @@ def call(action, json_parametros):
         #print(url)
         if action == 'API_createDataset':
             respuesta = API_createDataset(json_parametros, url)
-        elif action == 'API_insertObservationsFromDataFrame':
+        elif action == 'API_insertObservations':
             respuesta = API_insertObservationsFromDataFrame(json_parametros, url)
         elif action == 'API_getObservationsFromDataset':
             respuesta = API_getSampleObservationsFromDataset(json_parametros, url)
@@ -71,13 +71,15 @@ def API_createDataset(json_parametros, url):
     if 'test_call' in json_parametros:
         test_call = json_parametros['test_call'] == 1
     respuesta0 = None
+    nom_obs = 'dataframe' if 'dataframe' in json_particion else 'observations'
     
     # Primer pedazo para crear el dataset
     if not test_call and n_filas > tam_pedazo_ini:
         if insert_observations:
             start = time.time()
             tam_pedazo_ini = tam_pedazo_ini if n_filas > tam_pedazo_ini else n_filas
-            json_particion['dataframe'] = df.sample(n=tam_pedazo_ini).to_json()
+            
+            json_particion[nom_obs] = df.sample(n=tam_pedazo_ini).to_json()
             json_particion_molde = json_particion.copy()
             json_particion_molde['insert_observations'] = 0
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion_molde)}).encode()
@@ -93,7 +95,7 @@ def API_createDataset(json_parametros, url):
             
             action = 'API_insertObservationsFromDataFrame'
             for i in range(0, n_filas, tam_pedazo):
-                json_particion['dataframe'] = df[i:i+tam_pedazo].to_json()
+                json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
                 data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
                 respuesta = dameRespuestaLlamado(url, data)
                 # Imprimir avance
@@ -103,15 +105,16 @@ def API_createDataset(json_parametros, url):
                     print("Wrapping Up..")
                 else:
                     print(str(avance) + "%")
+                    time.sleep(2)
                     #print("Uploading...")
         else:
-            json_particion['dataframe'] = df[0:tam_pedazo_ini].to_json()
+            json_particion[nom_obs] = df[0:tam_pedazo_ini].to_json()
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
             respuesta = dameRespuestaLlamado(url, data)
             return respuesta
     else:
         tam_pedazo_ini = tam_pedazo_ini if n_filas > tam_pedazo_ini else n_filas
-        json_particion['dataframe'] = df.sample(n=tam_pedazo_ini).to_json()
+        json_particion[nom_obs] = df.sample(n=tam_pedazo_ini).to_json()
         data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
         respuesta = dameRespuestaLlamado(url, data)
         return respuesta
@@ -126,10 +129,12 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
     n_columnas = df.shape[1]
     tam_pedazo_ini = 1000
     json_particion = json_parametros.copy()
+    nom_obs = 'dataframe' if 'dataframe' in json_particion else 'observations'
+    
     if n_filas > tam_pedazo_ini:
         # Inserta por primera vez para medir tiempos.
         start = time.time()
-        json_particion['dataframe'] = df[0:tam_pedazo_ini].to_json()
+        json_particion[nom_obs] = df[0:tam_pedazo_ini].to_json()
         data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
         respuesta = dameRespuestaLlamado(url, data)
         stop = time.time()
@@ -138,7 +143,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
         print("Uploading..")
         json_particion = json_parametros.copy()
         for i in range(tam_pedazo_ini, n_filas, tam_pedazo):
-            json_particion['dataframe'] = df[i:i+tam_pedazo].to_json()
+            json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
             data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
             respuesta = dameRespuestaLlamado(url, data)
             # Imprimir avance
