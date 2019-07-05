@@ -21,7 +21,9 @@ def dameRespuestaLlamado(url, data):
         respuesta = json.loads(response.read().decode())
     try:
         if 'error' in respuesta['status']:
+            print("")
             print("Error: " + str(respuesta['response']))
+            print("")
             return False
     except:
         print(respuesta)
@@ -50,7 +52,7 @@ def call(action, json_parametros):
             respuesta = dameRespuestaLlamado(url, data)
         return respuesta
     except Exception as e:
-        if json_parametros['oblender'] == 1:
+        if 'oblender' in json_parametros and json_parametros['oblender'] == 1:
             print(json.dumps({"status": "internal error", "msg": traceback.format_exc()}))
         else:
             print(json.dumps({"status": "internal error", "msg": str(e)}))
