@@ -9,11 +9,11 @@ from contextlib import closing
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import traceback
 import requests
 import time
 import math
 import json
-import traceback
 
 
 def dameRespuestaLlamado(url, data):
@@ -70,9 +70,12 @@ def API_createDataset(json_parametros, url):
     json_particion = json_parametros.copy()
     if 'insert_observations' in json_parametros:
         insert_observations = json_parametros['insert_observations'] == 1
-    test_call = False
-    if 'test_call' in json_parametros:
-        test_call = json_parametros['test_call'] == 1
+        
+    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else False
+    if test_call == 1:
+        print("")
+        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print("")
     respuesta0 = None
     
     # Primer pedazo para crear el dataset
@@ -93,7 +96,7 @@ def API_createDataset(json_parametros, url):
             print("Starting upload..")
             stop = time.time()
             segundos = math.ceil(stop - start)
-            tam_pedazo = int(round(300 / segundos))
+            tam_pedazo = int(round(600 / segundos))
             
             action = 'API_insertObservationsFromDataFrame'
             for i in range(0, n_filas, tam_pedazo):
@@ -125,6 +128,12 @@ def API_createDataset(json_parametros, url):
 def API_insertObservationsFromDataFrame(json_parametros, url):
     action = 'API_insertObservationsFromDataFrame'
     
+    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else 0
+    if test_call == 1:
+        print("")
+        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print("")
+        
     nom_obs = 'dataframe' if 'dataframe' in json_parametros else 'observations'
     df, valido_df, msj = comprobarJSONaDF(json_parametros[nom_obs])
     if not valido_df:
@@ -142,7 +151,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
         respuesta = dameRespuestaLlamado(url, data)
         stop = time.time()
         segundos = math.ceil(stop - start)
-        tam_pedazo = int(round(300 / segundos))
+        tam_pedazo = int(round(600 / segundos))
         print("Uploading..")
         json_particion = json_parametros.copy()
         for i in range(tam_pedazo_ini, n_filas, tam_pedazo):
@@ -169,39 +178,48 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
     action = 'API_getSampleObservationsFromDataset'
     
     start = time.time()
-    json_parametros['tamano_bin'] = 50
-    json_parametros['skip'] = 0
-    data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-    respuesta = dameRespuestaLlamado(url, data)
-    t_universo = respuesta['universe_size']
-    stop = time.time()
-    segundos = math.ceil(stop - start)
-    tam_pedazo = int(round(300 / segundos))
-    num_pedazos = math.ceil(t_universo/tam_pedazo)
-    num_pedazos = num_pedazos if num_pedazos > 0 else 1
-    print('Setting up..')
-    df_resp = None
-    for i in range(0, num_pedazos):
-        json_parametros['tamano_bin'] = tam_pedazo
-        json_parametros['skip'] = tam_pedazo * i
+    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else 0
+    if test_call == 1:
+        print("")
+        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print("")
         data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
         respuesta = dameRespuestaLlamado(url, data)
-        df = pd.DataFrame.from_dict(respuesta['sample'])
-        if df_resp is None:
-            df_resp = df
-        else:
-            df_resp = df_resp.append(df).reset_index(drop=True)
-        avance = round(((i + 1)/num_pedazos) * 100, 2)
-        if avance >= 100:
-            print(str(avance) + " % completed.")
-            print("wrapping up..")
-        else:
-            print(str(avance) + " %")
-            #print("downloading..")
-    if 'sample_size' in json_parametros:
-        if int(json_parametros['sample_size']) < df_resp.shape[0]:
-            drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
-            df_resp = df_resp.drop(drop_indices)
+        df_resp = pd.DataFrame.from_dict(respuesta['sample'])
+        df_resp = df_resp.reset_index(drop=True)
+        t_universo = 0
+    else:
+        json_parametros['tamano_bin'] = 50
+        json_parametros['skip'] = 0
+        data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+        respuesta = dameRespuestaLlamado(url, data)
+        t_universo = respuesta['universe_size']
+        stop = time.time()
+        segundos = math.ceil(stop - start)
+        tam_pedazo = int(round(600 / segundos))
+        num_pedazos = math.ceil(t_universo/tam_pedazo)
+        num_pedazos = num_pedazos if num_pedazos > 0 else 1
+        df_resp = None
+        for i in range(0, num_pedazos):
+            json_parametros['tamano_bin'] = tam_pedazo
+            json_parametros['skip'] = tam_pedazo * i
+            data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+            respuesta = dameRespuestaLlamado(url, data)
+            df = pd.DataFrame.from_dict(respuesta['sample'])
+            if df_resp is None:
+                df_resp = df
+            else:
+                df_resp = df_resp.append(df).reset_index(drop=True)
+            avance = round(((i + 1)/num_pedazos) * 100, 2)
+            if avance >= 100:
+                print(str(avance) + " % completed.")
+            else:
+                print(str(avance) + " %")
+                #print("downloading..")
+        if 'sample_size' in json_parametros:
+            if int(json_parametros['sample_size']) < df_resp.shape[0]:
+                drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
+                df_resp = df_resp.drop(drop_indices)
     #print(df_resp)
     respuesta = json.loads(json.dumps({'universe_size' : t_universo, 'sample' : json.loads(df_resp.to_json())}))
     return respuesta
