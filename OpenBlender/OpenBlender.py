@@ -69,12 +69,13 @@ def API_createDataset(json_parametros, url):
     insert_observations = True
     json_particion = json_parametros.copy()
     if 'insert_observations' in json_parametros:
-        insert_observations = json_parametros['insert_observations'] == 1
+        insert_observations = json_parametros['insert_observations'] == 1 or json_parametros['insert_observations'] == 'on'
         
-    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else False
+    test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
+
     if test_call == 1:
         print("")
-        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print('This is a TEST CALL, set "test_call" : "off" or remove to execute service.')
         print("")
     respuesta0 = None
     
@@ -128,10 +129,10 @@ def API_createDataset(json_parametros, url):
 def API_insertObservationsFromDataFrame(json_parametros, url):
     action = 'API_insertObservationsFromDataFrame'
     
-    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else 0
+    test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
     if test_call == 1:
         print("")
-        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print('This is a TEST CALL, set "test_call" : "off" or remove to execute service.')
         print("")
         
     nom_obs = 'dataframe' if 'dataframe' in json_parametros else 'observations'
@@ -178,10 +179,10 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
     action = 'API_getSampleObservationsFromDataset'
     
     start = time.time()
-    test_call = 1 if 'test_call' in json_parametros and json_parametros['test_call'] == 1 else 0
+    test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
     if test_call == 1:
         print("")
-        print('This is a TEST CALL, set "test_call:0" or remove to execute service.')
+        print('This is a TEST CALL, set "test_call" : "off" or remove to execute service.')
         print("")
         data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
         respuesta = dameRespuestaLlamado(url, data)
