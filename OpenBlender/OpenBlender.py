@@ -21,8 +21,9 @@ def dameRespuestaLlamado(url, data):
         respuesta = json.loads(response.read().decode())
     try:
         if 'error' in respuesta['status']:
-            print("")
-            print("Error: " + str(respuesta['response']))
+            print("------------------------------------------------")
+            print("API call error: " + str(respuesta['response']))
+            print("------------------------------------------------")
             print("")
             return False
     except:
