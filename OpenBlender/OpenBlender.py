@@ -210,15 +210,15 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 				respuesta = dameRespuestaLlamado(url, data)
 				df = pd.DataFrame.from_dict(respuesta['sample'])
 				if df_resp is None:
-				df_resp = df
+					df_resp = df
 				else:
-				df_resp = df_resp.append(df).reset_index(drop=True)
-				avance = round(((i + 1)/num_pedazos) * 100, 2)
+					df_resp = df_resp.append(df).reset_index(drop=True)
+					avance = round(((i + 1)/num_pedazos) * 100, 2)
 				if avance >= 100:
-				print(str(avance) + " % completed.")
+					print(str(avance) + " % completed.")
 				else:
-				print(str(avance) + " %")
-				#print("downloading..")
+					print(str(avance) + " %")
+					#print("downloading..")
 			except:
 				print("Warning: Some observations could not be processed.")
 		if 'sample_size' in json_parametros:
