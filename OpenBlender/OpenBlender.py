@@ -1,4 +1,4 @@
-# Copyright (c) 2019 OpenBlender.io
+# Copyright (c) 2020 OpenBlender.io
 # Simplicity is key.
 
 
@@ -191,7 +191,7 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
         df_resp = df_resp.reset_index(drop=True)
         t_universo = 0
     else:
-        json_parametros['tamano_bin'] = 50
+        json_parametros['tamano_bin'] = 25
         json_parametros['skip'] = 0
         data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
         respuesta = dameRespuestaLlamado(url, data)
@@ -203,21 +203,24 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
         num_pedazos = num_pedazos if num_pedazos > 0 else 1
         df_resp = None
         for i in range(0, num_pedazos):
-            json_parametros['tamano_bin'] = tam_pedazo
-            json_parametros['skip'] = tam_pedazo * i
-            data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
-            respuesta = dameRespuestaLlamado(url, data)
-            df = pd.DataFrame.from_dict(respuesta['sample'])
-            if df_resp is None:
-                df_resp = df
-            else:
-                df_resp = df_resp.append(df).reset_index(drop=True)
-            avance = round(((i + 1)/num_pedazos) * 100, 2)
-            if avance >= 100:
-                print(str(avance) + " % completed.")
-            else:
-                print(str(avance) + " %")
-                #print("downloading..")
+			try:
+				json_parametros['tamano_bin'] = tam_pedazo
+				json_parametros['skip'] = tam_pedazo * i
+				data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+				respuesta = dameRespuestaLlamado(url, data)
+				df = pd.DataFrame.from_dict(respuesta['sample'])
+				if df_resp is None:
+				df_resp = df
+				else:
+				df_resp = df_resp.append(df).reset_index(drop=True)
+				avance = round(((i + 1)/num_pedazos) * 100, 2)
+				if avance >= 100:
+				print(str(avance) + " % completed.")
+				else:
+				print(str(avance) + " %")
+				#print("downloading..")
+			except:
+				print("Warning: Some observations could not be processed.")
         if 'sample_size' in json_parametros:
             if int(json_parametros['sample_size']) < df_resp.shape[0]:
                 drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
