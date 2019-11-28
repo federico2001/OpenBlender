@@ -48,6 +48,8 @@ def call(action, json_parametros):
 			respuesta = API_getSampleObservationsFromDataset(json_parametros, url)
 		elif action == 'API_powerModel':
 			respuesta = API_powerModel(json_parametros, url)
+		elif action == 'API_getDataWithVectorizer':
+			respuesta = API_getDataWithVectorizer(json_parametros, url)
 		else:
 			data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
@@ -157,27 +159,34 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 		print("Uploading..")
 		json_particion = json_parametros.copy()
 		for i in range(tam_pedazo_ini, n_filas, tam_pedazo):
-			json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
-			data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
-			respuesta = dameRespuestaLlamado(url, data)
-			# Imprimir avance
-			avance = round((i + tam_pedazo)/n_filas * 100, 2)
-			if avance > 100:
-				print('100%')
-				print("Wrapping Up..")
-			else:
-				print(str(avance) + "%")
-				#print("Uploading...")
-				time.sleep(2)
+			try:
+				json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
+				data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+				respuesta = dameRespuestaLlamado(url, data)
+				# Imprimir avance
+				avance = round((i + tam_pedazo)/n_filas * 100, 2)
+				if avance > 100:
+					print('100%')
+					print("Wrapping Up..")
+				else:
+					print(str(avance) + "%")
+					#print("Uploading...")
+					time.sleep(2)
+			except:
+				print("Warning: Some observations might not have been uploaded.")
 	else:
 		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
 		with closing(urlopen(url, data)) as response:
 			return json.loads(response.read().decode())
 	return respuesta
 
+def API_getDataWithVectorizer(json_parametros, url):
+	return API_genericDownloadCall(json_parametros, url, 'API_getDataWithVectorizer', 5, 300)
 
 def API_getSampleObservationsFromDataset(json_parametros, url):
-	action = 'API_getSampleObservationsFromDataset'
+	return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsFromDataset', 25, 600)
+
+def API_genericDownloadCall(json_parametros, url, action, n_test_observations, slice_mult):
 
 	start = time.time()
 	test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
@@ -191,14 +200,14 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 		df_resp = df_resp.reset_index(drop=True)
 		t_universo = 0
 	else:
-		json_parametros['tamano_bin'] = 25
+		json_parametros['tamano_bin'] = n_test_observations
 		json_parametros['skip'] = 0
 		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
 		respuesta = dameRespuestaLlamado(url, data)
 		t_universo = respuesta['universe_size']
 		stop = time.time()
 		segundos = math.ceil(stop - start)
-		tam_pedazo = int(round(600 / segundos))
+		tam_pedazo = int(round(slice_mult / segundos))
 		num_pedazos = math.ceil(t_universo/tam_pedazo)
 		num_pedazos = num_pedazos if num_pedazos > 0 else 1
 		df_resp = None
@@ -213,13 +222,14 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 					df_resp = df
 				else:
 					df_resp = df_resp.append(df).reset_index(drop=True)
-					avance = round(((i + 1)/num_pedazos) * 100, 2)
+				avance = round(((i + 1)/num_pedazos) * 100, 2)
 				if avance >= 100:
 					print(str(avance) + " % completed.")
 				else:
 					print(str(avance) + " %")
 					#print("downloading..")
-			except:
+			except Exception as e:
+				#print(str(e))
 				print("Warning: Some observations could not be processed.")
 		if 'sample_size' in json_parametros:
 			if int(json_parametros['sample_size']) < df_resp.shape[0]:
