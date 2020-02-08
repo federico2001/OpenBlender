@@ -3,6 +3,7 @@
 
 
 from urllib.request import Request, urlopen
+from base64 import b64encode, b64decode
 from urllib.request import urlopen
 from urllib.parse import urlencode
 from contextlib import closing
@@ -14,11 +15,13 @@ import requests
 import time
 import math
 import json
-
+import zlib
 
 def dameRespuestaLlamado(url, data):
 	with closing(urlopen(url, data)) as response:
 		respuesta = json.loads(response.read().decode())
+		if 'base64_zip' in respuesta:
+			respuesta = json.loads(zlib.decompress(b64decode(respuesta['base64_zip'])))
 	try:
 		if 'error' in respuesta['status']:
 			print("------------------------------------------------")
@@ -51,7 +54,7 @@ def call(action, json_parametros):
 		elif action == 'API_getDataWithVectorizer':
 			respuesta = API_getDataWithVectorizer(json_parametros, url)
 		else:
-			data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+			data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
 		return respuesta
 	except Exception as e:
@@ -91,7 +94,7 @@ def API_createDataset(json_parametros, url):
 			json_particion[nom_obs] = df.sample(n=tam_pedazo_ini).to_json()
 			json_particion_molde = json_particion.copy()
 			json_particion_molde['insert_observations'] = 0
-			data = urlencode({'action' : action, 'json' : json.dumps(json_particion_molde)}).encode()
+			data = urlencode({'action' : action, 'json' : json.dumps(json_particion_molde), 'compress' : 1}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
 			#print(respuesta)
 			respuesta0 = respuesta
@@ -105,7 +108,7 @@ def API_createDataset(json_parametros, url):
 			action = 'API_insertObservationsFromDataFrame'
 			for i in range(0, n_filas, tam_pedazo):
 				json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
-				data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+				data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				# Imprimir avance
 				avance = round((i + tam_pedazo) / n_filas * 100, 2)
@@ -118,13 +121,13 @@ def API_createDataset(json_parametros, url):
 					#print("Uploading...")
 		else:
 			json_particion[nom_obs] = df[0:tam_pedazo_ini].to_json()
-			data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+			data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
 			return respuesta
 	else:
 		tam_pedazo_ini = tam_pedazo_ini if n_filas > tam_pedazo_ini else n_filas
 		json_particion[nom_obs] = df.sample(n=tam_pedazo_ini).to_json()
-		data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+		data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 		respuesta = dameRespuestaLlamado(url, data)
 		return respuesta
 	return respuesta0
@@ -151,7 +154,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 		# Inserta por primera vez para medir tiempos.
 		start = time.time()
 		json_particion[nom_obs] = df[0:tam_pedazo_ini].to_json()
-		data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+		data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 		respuesta = dameRespuestaLlamado(url, data)
 		stop = time.time()
 		segundos = math.ceil(stop - start)
@@ -161,7 +164,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 		for i in range(tam_pedazo_ini, n_filas, tam_pedazo):
 			try:
 				json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
-				data = urlencode({'action' : action, 'json' : json.dumps(json_particion)}).encode()
+				data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				# Imprimir avance
 				avance = round((i + tam_pedazo)/n_filas * 100, 2)
@@ -175,7 +178,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 			except:
 				print("Warning: Some observations might not have been uploaded.")
 	else:
-		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 		with closing(urlopen(url, data)) as response:
 			return json.loads(response.read().decode())
 	return respuesta
@@ -194,7 +197,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 		print("")
 		print('This is a TEST CALL, set "test_call" : "off" or remove to execute service.')
 		print("")
-		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 		respuesta = dameRespuestaLlamado(url, data)
 		df_resp = pd.DataFrame.from_dict(respuesta['sample'])
 		df_resp = df_resp.reset_index(drop=True)
@@ -202,7 +205,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 	else:
 		json_parametros['tamano_bin'] = n_test_observations
 		json_parametros['skip'] = 0
-		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 		respuesta = dameRespuestaLlamado(url, data)
 		t_universo = respuesta['universe_size']
 		stop = time.time()
@@ -215,7 +218,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 			try:
 				json_parametros['tamano_bin'] = tam_pedazo
 				json_parametros['skip'] = tam_pedazo * i
-				data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+				data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				df = pd.DataFrame.from_dict(respuesta['sample'])
 				if df_resp is None:
@@ -242,7 +245,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 
 def API_powerModel(json_parametros, url):
 	action = 'API_powerModel'
-	data = urlencode({'action' : action, 'json' : json.dumps(json_parametros)}).encode()
+	data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 	respuesta = dameRespuestaLlamado(url, data)
 	return respuesta
 
