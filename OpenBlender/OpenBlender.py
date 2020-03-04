@@ -17,7 +17,10 @@ import math
 import json
 import zlib
 
+VERSION = 1.12
+
 def dameRespuestaLlamado(url, data):
+	respuesta = ''
 	with closing(urlopen(url, data)) as response:
 		respuesta = json.loads(response.read().decode())
 		if 'base64_zip' in respuesta:
@@ -30,11 +33,13 @@ def dameRespuestaLlamado(url, data):
 			print("")
 			return False
 	except:
-		print(respuesta)
+		print("--Internal error. Please upgrade OpenBlender verison via Pip.--")
+		print("-----")
 	return respuesta
 
 
 def call(action, json_parametros):
+	respuesta = ''
 	try:
 		respuesta = ''
 		url = ''
@@ -52,7 +57,9 @@ def call(action, json_parametros):
 		elif action == 'API_powerModel':
 			respuesta = API_powerModel(json_parametros, url)
 		elif action == 'API_getDataWithVectorizer':
-			respuesta = API_getDataWithVectorizer(json_parametros, url)
+			respuesta = API_getSampleObservationsWithVectorizer(json_parametros, url)
+		elif action == 'API_getSampleObservationsWithVectorizer':
+			respuesta = API_getSampleObservationsWithVectorizer(json_parametros, url)
 		else:
 			data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
@@ -65,6 +72,7 @@ def call(action, json_parametros):
 		return json.dumps({"status": "internal error", "msg": str(e)})
     
 def API_createDataset(json_parametros, url):
+	respuesta = ''
 	action = 'API_createDataset'
 	nom_obs = 'dataframe' if 'dataframe' in json_parametros else 'observations'
 	df, valido_df, msj = comprobarJSONaDF(json_parametros[nom_obs])
@@ -134,7 +142,7 @@ def API_createDataset(json_parametros, url):
 
 def API_insertObservationsFromDataFrame(json_parametros, url):
 	action = 'API_insertObservationsFromDataFrame'
-
+	respuesta = ''
 	test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
 	if test_call == 1:
 		print("")
@@ -183,13 +191,49 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 			return json.loads(response.read().decode())
 	return respuesta
 
-def API_getDataWithVectorizer(json_parametros, url):
-	return API_genericDownloadCall(json_parametros, url, 'API_getDataWithVectorizer', 5, 300)
 
+def API_getSampleObservationsWithVectorizer(json_parametros, url):
+	global VERSION
+	confirm, consumption_id = initializeTask(json_parametros, url)
+	if confirm == 'y':
+		print("Task confirmed. Starting download..")
+		json_parametros['consumption_id'] = consumption_id
+		json_parametros['python_version'] = VERSION
+		return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsWithVectorizerPlus', 5, 300)
+	else:
+		print("")
+		print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 0.")
+		return {'status' : 'cancelled'}
+    
+    
 def API_getSampleObservationsFromDataset(json_parametros, url):
-	return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsFromDataset', 25, 600)
+	global VERSION
+	confirm, consumption_id = initializeTask(json_parametros, url)
+	if confirm == 'y':
+		print("Task confirmed. Starting download..")
+		json_parametros['consumption_id'] = consumption_id
+		json_parametros['python_version'] = VERSION
+		return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsFromDataset', 25, 600)
+	else:
+		print("")
+		print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
+		return {'status' : 'cancelled'}
+
+def initializeTask(json_parametros, url):
+	json_parametros['python_version'] = VERSION
+	data = urlencode({'action' : 'API_initializeTask', 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
+	details_task = dameRespuestaLlamado(url, data)
+	#print(details_task)
+	consumption_id = details_task['consumption_id']
+	print("Task ID: '" + str(consumption_id) + "'.")
+	print("Total estimated consumption: " + str(round(details_task['details']['total_consumption'],2)) + " processing units.")
+	consumption_confirmation = json_parametros['consumption_confirmation'] if 'consumption_confirmation' in json_parametros else 0
+	time.sleep(0.5)
+	confirm = input("Continue?  [y] yes \t [n] no") if consumption_confirmation == 'on' else 'y'
+	return confirm, consumption_id
 
 def API_genericDownloadCall(json_parametros, url, action, n_test_observations, slice_mult):
+	respuesta = ''
 	try:
 		start = time.time()
 		test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
