@@ -17,7 +17,7 @@ import math
 import json
 import zlib
 
-VERSION = 1.12
+VERSION = 1.13
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -60,6 +60,8 @@ def call(action, json_parametros):
 			respuesta = API_getSampleObservationsWithVectorizer(json_parametros, url)
 		elif action == 'API_getSampleObservationsWithVectorizer':
 			respuesta = API_getSampleObservationsWithVectorizer(json_parametros, url)
+		elif action == 'API_getOpenTextData':
+			respuesta = API_getOpenTextData(json_parametros, url)
 		else:
 			data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 			respuesta = dameRespuestaLlamado(url, data)
@@ -218,7 +220,22 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 		print("")
 		print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
 		return {'status' : 'cancelled'}
+    
 
+def API_getOpenTextData(json_parametros, url):
+	global VERSION
+	confirm, consumption_id = initializeTask(json_parametros, url)
+	if confirm == 'y':
+		print("Task confirmed. Starting download..")
+		json_parametros['consumption_id'] = consumption_id
+		json_parametros['python_version'] = VERSION
+		return API_genericDownloadCall(json_parametros, url, 'API_getOpenTextData', 25, 500)
+	else:
+		print("")
+		print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 0.")
+		return {'status' : 'cancelled'}
+    
+    
 def initializeTask(json_parametros, url):
 	json_parametros['python_version'] = VERSION
 	data = urlencode({'action' : 'API_initializeTask', 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
