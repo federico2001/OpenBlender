@@ -17,7 +17,7 @@ import math
 import json
 import zlib
 
-VERSION = 1.13
+VERSION = 1.14
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -35,6 +35,7 @@ def dameRespuestaLlamado(url, data):
 	except:
 		print("--Internal error. Please upgrade OpenBlender verison via Pip.--")
 		print("-----")
+		#print(traceback.format_exc())
 	return respuesta
 
 
@@ -176,6 +177,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 				json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
 				data = urlencode({'action' : action, 'json' : json.dumps(json_particion), 'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
+				#print(respuesta)
 				# Imprimir avance
 				avance = round((i + tam_pedazo)/n_filas * 100, 2)
 				if avance > 100:
@@ -189,8 +191,7 @@ def API_insertObservationsFromDataFrame(json_parametros, url):
 				print("Warning: Some observations might not have been uploaded.")
 	else:
 		data = urlencode({'action' : action, 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
-		with closing(urlopen(url, data)) as response:
-			return json.loads(response.read().decode())
+		respuesta = dameRespuestaLlamado(url, data)
 	return respuesta
 
 
