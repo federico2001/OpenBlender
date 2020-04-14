@@ -24,7 +24,10 @@ def dameRespuestaLlamado(url, data):
 	with closing(urlopen(url, data)) as response:
 		respuesta = json.loads(response.read().decode())
 		if 'base64_zip' in respuesta:
-			respuesta = json.loads(zlib.decompress(b64decode(respuesta['base64_zip'])))
+			try:
+				respuesta = json.loads(zlib.decompress(b64decode(respuesta['base64_zip'])).decode('utf-8'))
+			except:
+				respuesta = json.loads(zlib.decompress(b64decode(respuesta['base64_zip'])))
 	try:
 		if 'error' in respuesta['status']:
 			print("------------------------------------------------")
