@@ -17,7 +17,7 @@ import math
 import json
 import zlib
 
-VERSION = 1.14
+VERSION = 1.15
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
