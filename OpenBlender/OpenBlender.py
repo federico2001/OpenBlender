@@ -16,6 +16,7 @@ import time
 import math
 import json
 import zlib
+import os
 
 VERSION = 1.15
 
@@ -255,6 +256,7 @@ def initializeTask(json_parametros, url):
 
 def API_genericDownloadCall(json_parametros, url, action, n_test_observations, slice_mult):
 	respuesta = ''
+	nom_archivo = str(time.time()) + '.csv'
 	try:
 		start = time.time()
 		test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
@@ -288,8 +290,23 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 					df = pd.DataFrame.from_dict(respuesta['sample'])
 					if df_resp is None:
 						df_resp = df
+						try:
+							if not os.path.isfile(nom_archivo):
+							   df_resp.to_csv(nom_archivo)
+							else: # else it exists so append without writing the header
+							   df_resp.to_csv(nom_archivo, mode='a', header=False)
+							print('CSV will be stored in: ' + nom_archivo)
+						except:
+							print('Unable to save CSV locally, please save dataframe when download completes.')
 					else:
 						df_resp = df_resp.append(df).reset_index(drop=True)
+						try:
+							if not os.path.isfile(nom_archivo):
+							   df.to_csv(nom_archivo)
+							else: # else it exists so append without writing the header
+							   df.to_csv(nom_archivo, mode='a', header=False)
+						except:
+							1 + 1
 					avance = round(((i + 1)/num_pedazos) * 100, 2)
 					if avance >= 100:
 						print(str(avance) + " % completed.")
@@ -305,7 +322,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 				    df_resp = df_resp.drop(drop_indices)
 		if 'lag_feature' in json_parametros : 
 			df_resp = agregarLagsFeatures(df_resp, json_parametros['lag_feature'])
-		respuesta = json.loads(json.dumps({'universe_size' : t_universo, 'sample' : json.loads(df_resp.to_json())}))
+		respuesta = json.loads(json.dumps({'universe_size' : t_universo, 'sample' : json.loads(df_resp.to_json()), 'csv_stored' : nom_archivo}))
 	except:
 		print("")
 		print("")
