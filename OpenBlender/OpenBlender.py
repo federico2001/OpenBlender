@@ -8,17 +8,19 @@ from urllib.request import urlopen
 from urllib.parse import urlencode
 from contextlib import closing
 from datetime import datetime
+import datetime as dt
 import pandas as pd
 import numpy as np
 import traceback
 import requests
+import pytz
 import time
 import math
 import json
 import zlib
 import os
 
-VERSION = 1.15
+VERSION = 2.1
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -77,6 +79,145 @@ def call(action, json_parametros):
 		else:
 			print(json.dumps({"status": "internal error", "msg": str(e)}))
 		return json.dumps({"status": "internal error", "msg": str(e)})
+
+
+def dateToUnix(date_time_str, date_format, timezone = 'GMT'):
+    timezone = pytz.timezone(timezone)
+    
+    if isinstance(date_time_str, str):
+        date_time_obj = dt.datetime.strptime(date_time_str, date_format)
+        timezone_date_time_obj = timezone.localize(date_time_obj)
+        timestamp = (timezone_date_time_obj - dt.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
+        return timestamp
+    else:
+        try:
+            return [((timezone.localize(dt.datetime.strptime(val, date_format)) - dt.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()) for val in date_time_str]
+        except:
+            print(traceback.format_exc())
+
+def unixToDate(unix_ts, date_format = '%d-%m-%Y %H:%M:%S', timezone = 'GMT'):
+    return dt.datetime.fromtimestamp(unix_ts, tz= pytz.timezone(timezone)).strftime(date_format)
+      
+def searchTimeBlends(token, anchor_ts, search_text, oblender = None):
+	global VERSION
+	try:
+		if oblender != None:
+			url = 'http://3.16.237.62:8080/bronce'
+		else:
+			url = 'http://52.8.156.139/oro/'
+		try:
+			anchor_ts = anchor_ts.tolist()
+		except:
+			1 * 1
+			#print('excepcion')
+        
+		json_parametros = {
+           'token' : token,
+           'anchor_max' : max(anchor_ts),
+           'anchor_min' : min(anchor_ts),
+           'search_text' : search_text
+        }
+
+		json_parametros['python_version'] = VERSION
+		data = urlencode({'action' : 'API2_searchTimeBlends', 
+                          'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
+		respuesta = dameRespuestaLlamado(url, data)
+		if respuesta['status'] == 'success':
+			return respuesta['blends']
+		else:
+			print(respuesta)
+	except Exception as e:
+		if oblender != None:
+			print(json.dumps({"status": "internal error", "msg": (e)}))
+		else:
+			print(json.dumps({"status": "internal error", "msg": str(e)}))
+		return json.dumps({"status": "internal error", "msg": str(e)})
+    
+def timeBlend(token, anchor_ts, blend_source,
+              blend_type = 'closest_observation',
+              direction = 'time_prior',
+              interval_output = 'count',
+              ts_restriction = None,
+              oblender = None,
+              interval_size = 3600,
+              consumption_confirmation = 'off',
+              missing_values = 'raw',
+              data_format = 'dataframe'):
+	global VERSION
+	try:
+		if oblender != None:
+			url = 'http://3.16.237.62:8080/bronce'
+		else:
+			url = 'http://52.8.156.139/oro/'
+		try:
+			anchor_ts = anchor_ts.tolist()
+		except:
+			1 * 1
+			#print('excepcion')
+		anchor_ts.sort()
+        
+		json_parametros = {
+           'token' : token,
+           'anchor_ts' : anchor_ts,
+           'blend_source' : blend_source,
+           'blend_type' : blend_type,
+           'direction' : direction,
+           'agg_output' : interval_output,
+           'ts_restriction' : ts_restriction,
+           'agg_interval_size' : interval_size,
+           'missing_values' : missing_values,
+        }
+        
+		json_parameters_task = {'token' : token, 
+                                'number_of_rows' : len(anchor_ts),
+                                'blend_source' : blend_source, 
+                                'consumption_confirmation' : consumption_confirmation}
+        
+		confirm, consumption_id = initializeTask(json_parameters_task, url) #'y', 1 #
+
+		if confirm == 'y':
+			print("Task confirmed. Starting download..")
+			df_resp = None
+			resp_vacio = True
+			universe_size = len(anchor_ts)
+			piece_size = len(anchor_ts) if len(anchor_ts) <= 1000 else 1000
+			for i_act in range(0, universe_size, piece_size):
+				#print(str(i_act) + ':' + str(i_act + piece_size))
+				progress = round((i_act + piece_size) / universe_size if (i_act + piece_size) < universe_size else 1, 2)
+				json_parametros['consumption_id'] = consumption_id
+				json_parametros['python_version'] = VERSION
+				json_parametros['progreso'] = progress
+				json_parametros['anchor_ts'] = anchor_ts[i_act : i_act + piece_size]
+				data = urlencode({'action' : 'API2_getTimeBlend', 
+                              'json' : json.dumps(json_parametros), 
+                              'compress' : 1}).encode()
+				respuesta = dameRespuestaLlamado(url, data)
+				if respuesta['status'] == 'success':
+					print('Progress: ' + str(progress * 100) + '%')
+					if resp_vacio:
+						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['timestamp']).reset_index(drop=True)
+						resp_vacio = False
+					else:
+						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['timestamp']).reset_index(drop=True)], ignore_index=True)
+				else:
+					print(respuesta)
+			if data_format == 'dataframe':
+				return df_resp.sort_values(['timestamp']).reset_index(drop=True)
+			else:
+				return df_resp.sort_values(['timestamp']).reset_index(drop=True).to_json()
+		else:
+			print("")
+			print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
+			return {'status' : 'cancelled'}
+
+
+	except Exception as e:
+		if oblender != None:
+			print(json.dumps({"status": "internal error", "msg": (e)}))
+		else:
+			print(json.dumps({"status": "internal error", "msg": str(e)}))
+		return json.dumps({"status": "internal error", "msg": str(e)})
+    
     
 def API_createDataset(json_parametros, url):
 	respuesta = ''
@@ -119,7 +260,6 @@ def API_createDataset(json_parametros, url):
 			stop = time.time()
 			segundos = math.ceil(stop - start)
 			tam_pedazo = int(round(600 / segundos))
-			
 			action = 'API_insertObservationsFromDataFrame'
 			for i in range(0, n_filas, tam_pedazo):
 				json_particion[nom_obs] = df[i:i+tam_pedazo].to_json()
@@ -291,20 +431,22 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 					if df_resp is None:
 						df_resp = df
 						try:
-							if not os.path.isfile(nom_archivo):
-							   df_resp.to_csv(nom_archivo)
-							else: # else it exists so append without writing the header
-							   df_resp.to_csv(nom_archivo, mode='a', header=False)
-							print('CSV will be stored in: ' + nom_archivo)
+							if 'save_while_downloading' in json_parametros and json_parametros['save_while_downloading'] == 'on':
+								if not os.path.isfile(nom_archivo):
+									df_resp.to_csv(nom_archivo)
+								else: # else it exists so append without writing the header
+									df_resp.to_csv(nom_archivo, mode='a', header=False)
+								print('CSV will be stored in: ' + nom_archivo)
 						except:
 							print('Unable to save CSV locally, please save dataframe when download completes.')
 					else:
 						df_resp = df_resp.append(df).reset_index(drop=True)
 						try:
-							if not os.path.isfile(nom_archivo):
-							   df.to_csv(nom_archivo)
-							else: # else it exists so append without writing the header
-							   df.to_csv(nom_archivo, mode='a', header=False)
+							if 'save_while_downloading' in json_params and json_parametros['save_while_downloading'] == 'on':
+								if not os.path.isfile(nom_archivo):
+									df.to_csv(nom_archivo)
+								else: # else it exists so append without writing the header
+									df.to_csv(nom_archivo, mode='a', header=False)
 						except:
 							1 + 1
 					avance = round(((i + 1)/num_pedazos) * 100, 2)
