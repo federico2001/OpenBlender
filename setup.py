@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'OpenBlender',         # How you named your package folder (MyLib)
   packages = ['OpenBlender'],   
-  version = '2.1',      
+  version = '2.2',      
   license='MIT',        
   description = 'OpenBlender API Service',   
   author = 'Federico Riveroll',                   
