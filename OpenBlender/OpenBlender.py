@@ -174,13 +174,13 @@ def timeBlend(token, anchor_ts, blend_source,
                                 'consumption_confirmation' : consumption_confirmation}
         
 		confirm, consumption_id = initializeTask(json_parameters_task, url) #'y', 1 #
-
+		tam_ini = 1000 if 'id_dataset' in blend_source else 350
 		if confirm == 'y':
 			print("Task confirmed. Starting download..")
 			df_resp = None
 			resp_vacio = True
 			universe_size = len(anchor_ts)
-			piece_size = len(anchor_ts) if len(anchor_ts) <= 1000 else 1000
+			piece_size = len(anchor_ts) if len(anchor_ts) <= tam_ini else tam_ini
 			for i_act in range(0, universe_size, piece_size):
 				#print(str(i_act) + ':' + str(i_act + piece_size))
 				progress = round((i_act + piece_size) / universe_size if (i_act + piece_size) < universe_size else 1, 2)
