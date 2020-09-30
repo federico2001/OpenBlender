@@ -193,7 +193,8 @@ def timeBlend(token, anchor_ts, blend_source,
                               'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				if respuesta['status'] == 'success':
-					print('Progress: ' + str(progress * 100) + '%')
+					print(str(progress * 100) + '%')
+					time.sleep(2)
 					if resp_vacio:
 						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['timestamp']).reset_index(drop=True)
 						resp_vacio = False
