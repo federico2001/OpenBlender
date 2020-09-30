@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'OpenBlender',         # How you named your package folder (MyLib)
   packages = ['OpenBlender'],   
-  version = '2.4',      
+  version = '2.5',      
   license='MIT',        
   description = 'OpenBlender API Service',   
   author = 'Federico Riveroll',                   
   author_email = 'federico@openblender.io',      
   url = 'https://www.openblender.io',   # Provide either the link to your github or to your website
-  download_url = 'https://github.com/federico2001/OpenBlender/archive/v_2_4.tar.gz',    
+  download_url = 'https://github.com/federico2001/OpenBlender/archive/v_2_5.tar.gz',    
   keywords = ['OpenBlender'],   # Keywords that define your package best
   install_requires=[            
           'numpy',
