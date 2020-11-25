@@ -1,4 +1,4 @@
-# Copyright (c) 2020 OpenBlender.io
+# Copyright (c) 2021 OpenBlender.io
 # Simplicity is key.
 
 
@@ -20,7 +20,7 @@ import json
 import zlib
 import os
 
-VERSION = 2.1
+VERSION = 2.6
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -132,6 +132,51 @@ def searchTimeBlends(token, anchor_ts, search_text, oblender = None):
 		else:
 			print(json.dumps({"status": "internal error", "msg": str(e)}))
 		return json.dumps({"status": "internal error", "msg": str(e)})
+
+def searchLocationBlends(token, anchor_lat, anchor_lon, search_text, oblender = None):
+	global VERSION
+	try:
+		if oblender != None:
+			url = 'http://3.16.237.62:8080/bronce'
+		else:
+			url = 'http://52.8.156.139/oro/'
+		try:
+			anchor_lat = anchor_lat.tolist()
+			anchor_lon = anchor_lon.tolist()
+		except:
+			1 * 1
+			#print('excepcion')
+		if len(anchor_lat) != len(anchor_lon):
+			print(' ERROR: Size of "anchor_lat" (' + str(len(anchor_lat)) + ') and "anchor_lon" (' + str(len(anchor_lon)) + ') must be the same.')
+			return False
+
+		try:
+			json_parametros = {
+			'token' : token,
+			'anchor_rectangle' : {'top' : max(anchor_lat),
+                'bottom' : min(anchor_lat),
+                'right' : max(anchor_lon),
+                'left' : min(anchor_lon)},
+			'search_text' : search_text
+			}
+		except:
+			print(' ERROR: All values of "anchor_lat" and "anchor_lon" must be numerical.')
+			return False
+        
+		json_parametros['python_version'] = VERSION
+		data = urlencode({'action' : 'API2_searchLocationBlends', 
+                          'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
+		respuesta = dameRespuestaLlamado(url, data)
+		if respuesta['status'] == 'success':
+			return respuesta['blends']
+		else:
+			print(respuesta)
+	except Exception as e:
+		if oblender != None:
+			print(json.dumps({"status": "internal error", "msg": (e)}))
+		else:
+			print(json.dumps({"status": "internal error", "msg": str(e)}))
+		return json.dumps({"status": "internal error", "msg": str(e)})
     
 def timeBlend(token, anchor_ts, blend_source,
               blend_type = 'closest_observation',
@@ -219,6 +264,108 @@ def timeBlend(token, anchor_ts, blend_source,
 			print(json.dumps({"status": "internal error", "msg": str(e)}))
 		return json.dumps({"status": "internal error", "msg": str(e)})
     
+    
+def locationBlend(token, anchor_lat, anchor_lon, blend_source,
+              blend_type = 'closest_observation',
+              agg_output = 'count',
+              oblender = None,
+              n = 3,
+              r = 1000,
+              consumption_confirmation = 'off',
+              data_format = 'dataframe'):
+    
+	global VERSION
+	try:
+		if oblender != None:
+			url = 'http://3.16.237.62:8080/bronce'
+		else:
+			url = 'http://52.8.156.139/oro/'
+		try:
+			anchor_lat = anchor_lat.tolist()
+			anchor_lon = anchor_lon.tolist()
+		except:
+			1 * 1
+			#print('excepcion')
+		if len(anchor_lat) != len(anchor_lon):
+			print(' ERROR: Size of "anchor_lat" (' + str(len(anchor_lat)) + ') and "anchor_lon" (' + str(len(anchor_lon)) + ') must be the same.')
+			return False
+
+		try:
+			json_parametros = {
+			'token' : token,
+			'anchor_rectangle' : {'top' : max(anchor_lat),
+                'bottom' : min(anchor_lat),
+                'right' : max(anchor_lon),
+                'left' : min(anchor_lon)}
+			}
+		except:
+			print(traceback.format_exc())
+			print(' ERROR: All values of "anchor_lat" and "anchor_lon" must be numerical.')
+			return False
+			#print('excepcion')
+        
+		json_parametros = {
+           'token' : token,
+           'anchor_lat' : anchor_lat,
+           'anchor_lon' : anchor_lon,
+           'blend_source' : blend_source,
+           'blend_type' : blend_type,
+           'agg_output' : agg_output,
+           'n' : n,
+           'r' : r
+        }
+        
+		json_parameters_task = {'token' : token, 
+                                'number_of_rows' : len(anchor_lat),
+                                'blend_source' : blend_source, 
+                                'consumption_confirmation' : consumption_confirmation}
+        
+		confirm, consumption_id = initializeTask(json_parameters_task, url) #'y', 1 #
+		tam_ini = 500 
+		if confirm == 'y':
+			print("Task confirmed. Starting download..")
+			df_resp = None
+			resp_vacio = True
+			universe_size = len(anchor_lat)
+			piece_size = len(anchor_lat) if len(anchor_lat) <= tam_ini else tam_ini
+			for i_act in range(0, universe_size, piece_size):
+				#print(str(i_act) + ':' + str(i_act + piece_size))
+				progress = round((i_act + piece_size) / universe_size if (i_act + piece_size) < universe_size else 1, 2)
+				json_parametros['consumption_id'] = consumption_id
+				json_parametros['python_version'] = VERSION
+				json_parametros['progreso'] = progress
+				json_parametros['anchor_lat'] = anchor_lat[i_act : i_act + piece_size]
+				json_parametros['anchor_lon'] = anchor_lon[i_act : i_act + piece_size]
+				data = urlencode({'action' : 'API2_getLocationBlend', 
+                              'json' : json.dumps(json_parametros), 
+                              'compress' : 1}).encode()
+				respuesta = dameRespuestaLlamado(url, data)
+				if respuesta['status'] == 'success':
+					print(str(progress * 100) + '%')
+					time.sleep(2)
+					if resp_vacio:
+						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['latitude']).reset_index(drop=True)
+						resp_vacio = False
+					else:
+						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['latitude']).reset_index(drop=True)], ignore_index=True)
+				else:
+					print(respuesta)
+			if data_format == 'dataframe':
+				return df_resp.sort_values(['latitude']).reset_index(drop=True)
+			else:
+				return df_resp.sort_values(['latitude']).reset_index(drop=True).to_json()
+		else:
+			print("")
+			print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
+			return {'status' : 'cancelled'}
+
+
+	except Exception as e:
+		if oblender != None:
+			print(json.dumps({"status": "internal error", "msg": (e)}))
+		else:
+			print(json.dumps({"status": "internal error", "msg": str(e)}))
+		return json.dumps({"status": "internal error", "msg": str(e)})
     
 def API_createDataset(json_parametros, url):
 	respuesta = ''
