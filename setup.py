@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'OpenBlender',         # How you named your package folder (MyLib)
   packages = ['OpenBlender'],   
-  version = '2.5',      
+  version = '2.6',      
   license='MIT',        
   description = 'OpenBlender API Service',   
   author = 'Federico Riveroll',                   
   author_email = 'federico@openblender.io',      
   url = 'https://www.openblender.io',   # Provide either the link to your github or to your website
-  download_url = 'https://github.com/federico2001/OpenBlender/archive/v_2_5.tar.gz',    
+  download_url = 'https://github.com/federico2001/OpenBlender/archive/v_2_6.tar.gz',    
   keywords = ['OpenBlender'],   # Keywords that define your package best
   install_requires=[            
           'numpy',
@@ -25,5 +25,8 @@ setup(
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9'
   ],
 )
