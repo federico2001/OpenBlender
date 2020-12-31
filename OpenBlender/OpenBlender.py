@@ -20,7 +20,7 @@ import json
 import zlib
 import os
 
-VERSION = 2.6
+VERSION = 2.7
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -182,7 +182,6 @@ def timeBlend(token, anchor_ts, blend_source,
               blend_type = 'closest_observation',
               direction = 'time_prior',
               interval_output = 'count',
-              ts_restriction = None,
               oblender = None,
               interval_size = 3600,
               consumption_confirmation = 'off',
@@ -199,7 +198,7 @@ def timeBlend(token, anchor_ts, blend_source,
 		except:
 			1 * 1
 			#print('excepcion')
-		anchor_ts.sort()
+		#anchor_ts.sort()
         
 		json_parametros = {
            'token' : token,
@@ -208,7 +207,6 @@ def timeBlend(token, anchor_ts, blend_source,
            'blend_type' : blend_type,
            'direction' : direction,
            'agg_output' : interval_output,
-           'ts_restriction' : ts_restriction,
            'agg_interval_size' : interval_size,
            'missing_values' : missing_values,
         }
@@ -241,16 +239,16 @@ def timeBlend(token, anchor_ts, blend_source,
 					print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
-						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['timestamp']).reset_index(drop=True)
+						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)
 						resp_vacio = False
 					else:
-						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['timestamp']).reset_index(drop=True)], ignore_index=True)
+						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)], ignore_index=True)
 				else:
 					print(respuesta)
 			if data_format == 'dataframe':
-				return df_resp.sort_values(['timestamp']).reset_index(drop=True)
+				return df_resp
 			else:
-				return df_resp.sort_values(['timestamp']).reset_index(drop=True).to_json()
+				return df_resp.to_json()
 		else:
 			print("")
 			print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
@@ -344,16 +342,16 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
 					print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
-						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['latitude']).reset_index(drop=True)
+						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)
 						resp_vacio = False
 					else:
-						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False).sort_values(['latitude']).reset_index(drop=True)], ignore_index=True)
+						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)], ignore_index=True)
 				else:
 					print(respuesta)
 			if data_format == 'dataframe':
-				return df_resp.sort_values(['latitude']).reset_index(drop=True)
+				return df_resp
 			else:
-				return df_resp.sort_values(['latitude']).reset_index(drop=True).to_json()
+				return df_resp.to_json()
 		else:
 			print("")
 			print("Task cancelled. To execute tasks without prompt set 'consumption_confirmation' to 'off'.")
