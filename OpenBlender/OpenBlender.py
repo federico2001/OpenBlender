@@ -8,6 +8,7 @@ from urllib.request import urlopen
 from urllib.parse import urlencode
 from contextlib import closing
 from datetime import datetime
+from io import StringIO
 import datetime as dt
 import pandas as pd
 import numpy as np
@@ -20,7 +21,7 @@ import json
 import zlib
 import os
 
-VERSION = 2.7
+VERSION = 2.8
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -239,10 +240,10 @@ def timeBlend(token, anchor_ts, blend_source,
 					print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
-						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)
+						df_resp = pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)
 						resp_vacio = False
 					else:
-						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)], ignore_index=True)
+						df_resp = pd.concat([df_resp, pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)], ignore_index=True)
 				else:
 					print(respuesta)
 			if data_format == 'dataframe':
@@ -342,10 +343,10 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
 					print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
-						df_resp = pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)
+						df_resp = pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)
 						resp_vacio = False
 					else:
-						df_resp = pd.concat([df_resp, pd.read_json(json.dumps(respuesta['df_resp']), convert_dates=False,convert_axes=False)], ignore_index=True)
+						df_resp = pd.concat([df_resp, pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)], ignore_index=True)
 				else:
 					print(respuesta)
 			if data_format == 'dataframe':
@@ -629,7 +630,7 @@ def comprobarJSONaDF(df_json):
 	valido = True
 	msj = "Sucess"
 	try:
-		df_nuevo = pd.read_json(df_json, convert_dates=False, convert_axes=False)
+		df_nuevo = pd.read_json(StringIO(df_json), convert_dates=False, convert_axes=False)
 	except Exception as e:
 		df_nuevo = None
 		valido = False
