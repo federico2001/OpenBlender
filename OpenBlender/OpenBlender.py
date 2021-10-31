@@ -21,7 +21,7 @@ import json
 import zlib
 import os
 
-VERSION = 2.10
+VERSION = 2.11
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -218,11 +218,12 @@ def timeBlend(token, anchor_ts, blend_source,
                                 'number_of_rows' : len(anchor_ts),
                                 'blend_source' : blend_source, 
                                 'consumption_confirmation' : consumption_confirmation}
-        
+		print_progress = False if 'print_progress' in json_parametros and (json_parametros['print_progress'] == 0 or json_parametros['print_progress'] == 'off') else True
 		confirm, consumption_id = initializeTask(json_parameters_task, url) #'y', 1 #
 		tam_ini = 1000 if 'id_dataset' in blend_source else 350
 		if confirm == 'y':
-			print("Task confirmed. Starting download..")
+			if print_progress:
+				print("Task confirmed. Starting download..")
 			df_resp = None
 			resp_vacio = True
 			universe_size = len(anchor_ts)
@@ -239,7 +240,8 @@ def timeBlend(token, anchor_ts, blend_source,
                               'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				if respuesta['status'] == 'success':
-					print(str(progress * 100) + '%')
+					if print_progress:
+						print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
 						df_resp = pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)
@@ -322,11 +324,12 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
                                 'number_of_rows' : len(anchor_lat),
                                 'blend_source' : blend_source, 
                                 'consumption_confirmation' : consumption_confirmation}
-        
+		print_progress = False if 'print_progress' in json_parametros and (json_parametros['print_progress'] == 0 or json_parametros['print_progress'] == 'off') else True
 		confirm, consumption_id = initializeTask(json_parameters_task, url) #'y', 1 #
 		tam_ini = 500 
 		if confirm == 'y':
-			print("Task confirmed. Starting download..")
+			if print_progress:
+				print("Task confirmed. Starting download..")
 			df_resp = None
 			resp_vacio = True
 			universe_size = len(anchor_lat)
@@ -344,7 +347,8 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
                               'compress' : 1}).encode()
 				respuesta = dameRespuestaLlamado(url, data)
 				if respuesta['status'] == 'success':
-					print(str(progress * 100) + '%')
+					if print_progress:
+						print(str(progress * 100) + '%')
 					time.sleep(2)
 					if resp_vacio:
 						df_resp = pd.read_json(StringIO(json.dumps(respuesta['df_resp'])), convert_dates=False,convert_axes=False)
@@ -494,7 +498,7 @@ def API_getSampleObservationsWithVectorizer(json_parametros, url):
 	global VERSION
 	confirm, consumption_id = initializeTask(json_parametros, url)
 	if confirm == 'y':
-		print("Task confirmed. Starting download..")
+		#print("Task confirmed. Starting download..")
 		json_parametros['consumption_id'] = consumption_id
 		json_parametros['python_version'] = VERSION
 		return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsWithVectorizerPlus', 5, 300)
@@ -508,7 +512,7 @@ def API_getSampleObservationsFromDataset(json_parametros, url):
 	global VERSION
 	confirm, consumption_id = initializeTask(json_parametros, url)
 	if confirm == 'y':
-		print("Task confirmed. Starting download..")
+		#print("Task confirmed. Starting download..")
 		json_parametros['consumption_id'] = consumption_id
 		json_parametros['python_version'] = VERSION
 		return API_genericDownloadCall(json_parametros, url, 'API_getSampleObservationsFromDataset', 25, 600)
@@ -522,7 +526,7 @@ def API_getOpenTextData(json_parametros, url):
 	global VERSION
 	confirm, consumption_id = initializeTask(json_parametros, url)
 	if confirm == 'y':
-		print("Task confirmed. Starting download..")
+		#print("Task confirmed. Starting download..")
 		json_parametros['consumption_id'] = consumption_id
 		json_parametros['python_version'] = VERSION
 		return API_genericDownloadCall(json_parametros, url, 'API_getOpenTextData', 25, 500)
@@ -605,13 +609,15 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 							1 + 1
 					avance = round(((i + 1)/num_pedazos) * 100, 2)
 					if avance >= 100:
-						print(str(avance) + " % completed.")
+						if print_progress:
+							print(str(avance) + " % completed.")
 					else:
 						if print_progress:
 							print(str(avance) + " %")
 				except Exception as e:
 					#print(str(e))
-					print("Warning: Some observations could not be processed.")
+					if print_progress:
+						print("Warning: Some observations could not be processed.")
 			if 'sample_size' in json_parametros:
 				if int(json_parametros['sample_size']) < df_resp.shape[0]:
 				    drop_indices = np.random.choice(df_resp.index, df_resp.shape[0] - int(json_parametros['sample_size']), replace=False)
