@@ -21,7 +21,7 @@ import json
 import zlib
 import os
 
-VERSION = 2.8
+VERSION = 2.10
 
 def dameRespuestaLlamado(url, data):
 	respuesta = ''
@@ -187,7 +187,8 @@ def timeBlend(token, anchor_ts, blend_source,
               interval_size = 3600,
               consumption_confirmation = 'off',
               missing_values = 'raw',
-              data_format = 'dataframe'):
+              data_format = 'dataframe',
+              print_progress = 1):
 	global VERSION
 	try:
 		if oblender != None:
@@ -210,6 +211,7 @@ def timeBlend(token, anchor_ts, blend_source,
            'agg_output' : interval_output,
            'agg_interval_size' : interval_size,
            'missing_values' : missing_values,
+           'print_progress' : print_progress
         }
         
 		json_parameters_task = {'token' : token, 
@@ -271,7 +273,8 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
               n = 3,
               r = 1000,
               consumption_confirmation = 'off',
-              data_format = 'dataframe'):
+              data_format = 'dataframe',
+              print_progress = 1):
     
 	global VERSION
 	try:
@@ -311,7 +314,8 @@ def locationBlend(token, anchor_lat, anchor_lon, blend_source,
            'blend_type' : blend_type,
            'agg_output' : agg_output,
            'n' : n,
-           'r' : r
+           'r' : r,
+            'print_progress' : print_progress
         }
         
 		json_parameters_task = {'token' : token, 
@@ -530,12 +534,14 @@ def API_getOpenTextData(json_parametros, url):
     
 def initializeTask(json_parametros, url):
 	json_parametros['python_version'] = VERSION
+	print_progress = False if 'print_progress' in json_parametros and (json_parametros['print_progress'] == 0 or json_parametros['print_progress'] == 'off') else True
 	data = urlencode({'action' : 'API_initializeTask', 'json' : json.dumps(json_parametros), 'compress' : 1}).encode()
 	details_task = dameRespuestaLlamado(url, data)
 	#print(details_task)
 	consumption_id = details_task['consumption_id']
-	print("Task ID: '" + str(consumption_id) + "'.")
-	print("Total estimated consumption: " + str(round(details_task['details']['total_consumption'],2)) + " processing units.")
+	if print_progress:
+		print("Task ID: '" + str(consumption_id) + "'.")
+		print("Total estimated consumption: " + str(round(details_task['details']['total_consumption'],2)) + " processing units.")
 	consumption_confirmation = json_parametros['consumption_confirmation'] if 'consumption_confirmation' in json_parametros else 0
 	time.sleep(0.5)
 	confirm = input("Continue?  [y] yes \t [n] no") if consumption_confirmation == 'on' else 'y'
@@ -547,6 +553,7 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 	try:
 		start = time.time()
 		test_call = 1 if 'test_call' in json_parametros and (json_parametros['test_call'] == 1 or json_parametros['test_call'] == 'on') else False
+		print_progress = False if 'print_progress' in json_parametros and (json_parametros['print_progress'] == 0 or json_parametros['print_progress'] == 'off') else True
 		if test_call == 1:
 			print("")
 			print('This is a TEST CALL, set "test_call" : "off" or remove to execute service.')
@@ -600,8 +607,8 @@ def API_genericDownloadCall(json_parametros, url, action, n_test_observations, s
 					if avance >= 100:
 						print(str(avance) + " % completed.")
 					else:
-						print(str(avance) + " %")
-						#print("downloading..")
+						if print_progress:
+							print(str(avance) + " %")
 				except Exception as e:
 					#print(str(e))
 					print("Warning: Some observations could not be processed.")
